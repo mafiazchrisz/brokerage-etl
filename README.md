@@ -18,29 +18,89 @@ Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 
 ## Prerequisites
 
-- Docker Desktop (with Compose v2)
+- [Docker Desktop]
 
-## Quick Start
+## Setup
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/mafiazchrisz/junior-de-mar2026.git
+cd junior-de-mar2026
+```
+
+### Step 2 — Start all services
 
 ```bash
 docker compose up --build -d
 ```
 
-First boot takes ~60 seconds while Airflow initialises and pip installs packages.
+This will build the Airflow image, pull PostgreSQL and MinIO, and start all 3 containers.
+
+### Step 3 — Wait for services to be ready
+
+First boot takes ~60–90 seconds. Check that all containers are healthy:
+
+```bash
+docker compose ps
+```
+
+All services should show `healthy` or `running`:
+```
+NAME        STATUS
+postgres    healthy
+minio       healthy
+airflow     running
+```
+
+You can also follow the Airflow startup log until it prints `Airflow is ready`:
+```bash
+docker compose logs -f airflow
+```
+
+### Step 4 — Open the services
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | Airflow UI | http://localhost:8080 | `admin / admin` |
 | MinIO Console | http://localhost:9001 | `minioadmin / minioadmin` |
+| PostgreSQL | `localhost:5432` | user: `postgres`, password: `postgres`, db: `airflow` |
 
-## Trigger a Run
+### Step 5 — Enable and trigger the DAG
 
-**Via UI:** toggle the `brokerage_etl` DAG **On**, then click **Trigger DAG ▶**.
+1. Open **http://localhost:8080** and log in
+2. Find the `brokerage_etl` DAG
+3. Toggle the DAG **On** (slider on the left)
+4. Click **▶ Trigger DAG** to run it immediately
 
-**Via CLI:**
+Or via CLI:
 ```bash
 docker compose exec airflow airflow dags trigger brokerage_etl
 ```
+
+### Step 6 — Monitor the run
+
+In the Airflow UI, click on the `brokerage_etl` DAG → click the latest run → verify all 3 tasks are green:
+```
+extract → transform → load
+```
+
+### Step 7 — Browse staged files in MinIO
+
+Open **http://localhost:9001**, log in, then navigate to:
+```
+brokerage → raw → <run-date> → clients.csv / instruments.csv / trades.csv
+brokerage → processed → <run-date> → clients.csv / instruments.csv / trades.csv / quarantine.csv
+```
+
+### Step 8 — Verify results in PostgreSQL
+
+Connect to the database:
+```bash
+docker compose exec postgres psql -U postgres -d airflow
+```
+
+Or connect via DBeaver with host `localhost`, port `5432`, database `airflow`, user/password `postgres`.
 
 ## Confirm Results
 
@@ -80,31 +140,43 @@ ORDER  BY t.trade_time;
 SELECT trade_id, reason, quarantined_at
 FROM   brokerage.quarantine_trades
 ORDER  BY trade_id;
+```
 
 Re-running the DAG produces the same result (idempotent — all loads use `ON CONFLICT DO UPDATE`).
 
 ## Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| `airflow standalone` | Single process (webserver + scheduler). Minimal containers for local dev. |
-| MinIO as staging layer | Raw and processed files land in object storage (`brokerage/raw/`, `brokerage/processed/`) before touching the DB. Files are browsable via MinIO Console without a SQL client. |
-| Two-stage landing (`raw/` → `processed/`) | Separating raw from processed enables re-processing without re-extracting, and keeps an audit trail of the original data. |
-| `brokerage` schema inside the `airflow` DB | Avoids a second `CREATE DATABASE` call that would require a shell init script (and CRLF risk on Windows). |
-| Quarantine table | Invalid rows are logged with a reason instead of silently dropped — supports traceability. |
-| `ON CONFLICT DO UPDATE` everywhere | Safe to re-run; running twice gives the same final state. |
-| Late updates (T0034) | Duplicate `trade_id` with different `trade_time` → keep the record with the latest timestamp. |
-| `null fees → 0` | Cancelled trades commonly carry no fee; treating null as 0 is safer than rejecting the trade. |
-| No FK constraints in DB | FK validation is done in Python transform; avoids insert-order issues between tables. |
-| KYC gate on trades | Only clients with `kyc_status = APPROVED` **and** a known `country` may have trades loaded. PENDING/REJECTED or missing country → quarantine. |
+**Infrastructure**
+- **`airflow standalone`** — Single process (webserver + scheduler). Avoids running 4+ containers for a local dev setup.
+- **MinIO as staging layer** — Raw and processed files land in object storage (`brokerage/raw/<date>/`, `brokerage/processed/<date>/`) before touching the DB. Browsable via MinIO Console without a SQL client.
+- **`brokerage` schema inside the `airflow` DB** — Avoids a second `CREATE DATABASE` call; simpler init script with no CRLF issues on Windows.
+
+**Pipeline behaviour**
+- **Two-stage landing (`raw/` → `processed/`)** — Separates source data from cleaned data. Enables re-processing a specific date without re-extracting.
+- **`ON CONFLICT DO UPDATE` everywhere** — All upserts are idempotent; running the DAG twice produces the same result.
+- **No FK constraints in DB** — FK validation is done in Python transform to avoid insert-order dependency between tables.
+
+**Data handling**
+- **Duplicate `trade_id` (T0034)** — Late-update pattern: when the same `trade_id` appears twice, keep the record with the latest `trade_time`.
+- **`null fees → 0`** — Cancelled trades commonly carry no fee; treating null as 0 avoids rejecting otherwise valid trades.
+- **Quarantine table** — Invalid rows are stored with a reason instead of being silently dropped, supporting auditability and investigation.
+
+**KYC**
+- **KYC gate on trades** — Only clients with `kyc_status = APPROVED` **and** a non-null `country` may have trades loaded. `country` is required for sanctions screening (AML/OFAC). PENDING, REJECTED, or missing country → quarantine.
 
 ## Data Quality Rules
 
-Trades are quarantined (not silently dropped) when:
+Trades are quarantined (not silently dropped) when any of the following apply:
+
+**Field validation**
 - `side` is not `BUY` or `SELL`
 - `quantity` ≤ 0 or missing
 - `price` ≤ 0 or missing
-- `client_id` not found in the clients reference table
-- `instrument_id` not found in the instruments reference table
-- `kyc_status` is not `APPROVED` (PENDING and REJECTED clients cannot trade)
-- `kyc_status` is `APPROVED` but `country` is missing (KYC data incomplete)
+
+**Reference integrity**
+- `client_id` not found in the clients table
+- `instrument_id` not found in the instruments table
+
+**KYC compliance**
+- `kyc_status` is `PENDING` or `REJECTED` — client not cleared to trade
+- `kyc_status` is `APPROVED` but `country` is missing — KYC data incomplete
