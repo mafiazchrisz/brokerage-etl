@@ -62,7 +62,8 @@ def transform_trades(df, clients_df, instruments_df):
     # Validate each row and build rejection reasons
     valid_clients = set(clients_df["client_id"])
     valid_instruments = set(instruments_df["instrument_id"])
-    kyc_map = clients_df.set_index("client_id")["kyc_status"].to_dict()
+    kyc_map     = clients_df.set_index("client_id")["kyc_status"].to_dict()
+    country_map = clients_df.set_index("client_id")["country"].to_dict()
 
     reasons = []
     kyc_flags = []
@@ -78,11 +79,14 @@ def transform_trades(df, clients_df, instruments_df):
             r.append(f"unknown client_id '{row['client_id']}'")
         if row["instrument_id"] not in valid_instruments:
             r.append(f"unknown instrument_id '{row['instrument_id']}'")
-            
-        # KYC check: only APPROVED clients may trade
+
+        # KYC check: only APPROVED clients with a known country may trade
         kyc_status = kyc_map.get(row["client_id"], "UNKNOWN")
+        country    = country_map.get(row["client_id"])
         if kyc_status != "APPROVED":
             r.append(f"client kyc_status is {kyc_status}")
+        elif not country or str(country).strip().upper() in ("", "NAN", "NONE"):
+            r.append("client country is missing — KYC data incomplete")
         kyc_flags.append(kyc_status)
         reasons.append(", ".join(r))
 
