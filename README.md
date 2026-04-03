@@ -26,6 +26,26 @@ Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 | Language | Python | 3.11 |
 | Data processing | pandas | 2.2.2 |
 
+## Project Structure
+
+```
+├── dags/
+│   └── etl_dag.py          # Airflow DAG — extract → transform → load
+├── src/
+│   ├── extract.py           # Read source CSVs
+│   ├── transform.py         # Clean, validate, split clean/quarantine
+│   ├── load.py              # Upsert into PostgreSQL
+│   └── storage.py           # MinIO upload/download helpers
+├── sql/
+│   └── init.sql             # Schema and table definitions
+├── scripts/
+│   └── entrypoint.sh        # Airflow startup script
+├── data/input/              # Source CSV files
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
+```
+
 ## Prerequisites
 
 - Docker Desktop
@@ -96,14 +116,9 @@ brokerage → raw → <run-date> → clients.csv / instruments.csv / trades.csv
 brokerage → processed → <run-date> → clients.csv / instruments.csv / trades.csv / quarantine.csv
 ```
 
-### Step 8 — Verify results in PostgreSQL
+### Step 8 — Verify results
 
-Connect to the database:
-```bash
-docker compose exec postgres psql -U postgres -d airflow
-```
-
-Or connect via DBeaver with host `localhost`, port `5432`, database `airflow`, user/password `postgres`.
+See [Confirm Results](#confirm-results) below for SQL queries.
 
 ## Confirm Results
 
