@@ -50,29 +50,36 @@ docker compose exec postgres psql -U postgres -d airflow
 ```
 
 ```sql
--- Set schema so table names don't need to be qualified
-SET search_path TO brokerage;
+-- ── 1. Row counts ────────────────────────────────────────────────────────────
+SELECT 'clients'          AS tbl, COUNT(*) FROM brokerage.clients
+UNION ALL
+SELECT 'instruments',              COUNT(*) FROM brokerage.instruments
+UNION ALL
+SELECT 'trades',                   COUNT(*) FROM brokerage.trades
+UNION ALL
+SELECT 'quarantine_trades',        COUNT(*) FROM brokerage.quarantine_trades;
 
--- Row counts per table
-SELECT 'clients'         AS tbl, COUNT(*) FROM clients
-UNION ALL
-SELECT 'instruments',             COUNT(*) FROM instruments
-UNION ALL
-SELECT 'trades',                  COUNT(*) FROM trades
-UNION ALL
-SELECT 'quarantine_trades',       COUNT(*) FROM quarantine_trades;
-
--- Clean trades with client and instrument detail
-SELECT t.trade_id, t.trade_time, c.client_name, i.symbol,
-       t.side, t.quantity, t.price, t.fees, t.status
-FROM   trades t
-JOIN   clients     c USING (client_id)
-JOIN   instruments i USING (instrument_id)
+-- ── 2. Clean trades (full detail) ───────────────────────────────────────────
+SELECT t.trade_id,
+       t.trade_time,
+       c.client_name,
+       c.kyc_status,
+       i.symbol,
+       i.asset_class,
+       t.side,
+       t.quantity,
+       t.price,
+       t.fees,
+       t.status
+FROM   brokerage.trades t
+JOIN   brokerage.clients     c USING (client_id)
+JOIN   brokerage.instruments i USING (instrument_id)
 ORDER  BY t.trade_time;
 
--- Rejected trades and why
-SELECT trade_id, reason FROM quarantine_trades ORDER BY trade_id;
-```
+-- ── 3. Quarantined trades and reasons ───────────────────────────────────────
+SELECT trade_id, reason, quarantined_at
+FROM   brokerage.quarantine_trades
+ORDER  BY trade_id;
 
 Re-running the DAG produces the same result (idempotent — all loads use `ON CONFLICT DO UPDATE`).
 
@@ -89,7 +96,7 @@ Re-running the DAG produces the same result (idempotent — all loads use `ON CO
 | Late updates (T0034) | Duplicate `trade_id` with different `trade_time` → keep the record with the latest timestamp. |
 | `null fees → 0` | Cancelled trades commonly carry no fee; treating null as 0 is safer than rejecting the trade. |
 | No FK constraints in DB | FK validation is done in Python transform; avoids insert-order issues between tables. |
-| KYC gate on trades | Only clients with `kyc_status = APPROVED` **and** a known `country` may have trades loaded. PENDING/REJECTED or missing country → quarantine. Country is required for sanctions screening (AML/OFAC). |
+| KYC gate on trades | Only clients with `kyc_status = APPROVED` **and** a known `country` may have trades loaded. PENDING/REJECTED or missing country → quarantine. |
 
 ## Data Quality Rules
 
@@ -100,4 +107,4 @@ Trades are quarantined (not silently dropped) when:
 - `client_id` not found in the clients reference table
 - `instrument_id` not found in the instruments reference table
 - `kyc_status` is not `APPROVED` (PENDING and REJECTED clients cannot trade)
-- `kyc_status` is `APPROVED` but `country` is missing (KYC data incomplete — country is required for sanctions screening)
+- `kyc_status` is `APPROVED` but `country` is missing (KYC data incomplete)
