@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS brokerage.trades (
     quantity      NUMERIC(20,6) NOT NULL,
     price         NUMERIC(20,6) NOT NULL,
     fees          NUMERIC(20,6) NOT NULL DEFAULT 0,
-    status        VARCHAR(20)   NOT NULL
+    status        VARCHAR(20)   NOT NULL,
+    kyc_flag      VARCHAR(20)   NOT NULL DEFAULT 'APPROVED'
 );
 
 -- Invalid rows are stored here with a reason instead of being silently dropped.
