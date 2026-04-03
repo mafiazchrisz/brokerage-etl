@@ -86,7 +86,7 @@ docker compose logs -f airflow
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | Airflow UI | http://localhost:8080 | user: `admin` / password: `admin` |
-| MinIO Console | http://localhost:9001 | `minioadmin / minioadmin` |
+| MinIO Console | http://localhost:9001 | user: `minioadmin` / password: `minioadmin` |
 | PostgreSQL | `localhost:5432` | user: `postgres` / password: `postgres` / db: `airflow` |
 
 ### Step 5 — Enable and trigger the DAG
@@ -116,16 +116,13 @@ brokerage → raw → <run-date> → clients.csv / instruments.csv / trades.csv
 brokerage → processed → <run-date> → clients.csv / instruments.csv / trades.csv / quarantine.csv
 ```
 
-### Step 8 — Verify results
-
-See [Confirm Results](#confirm-results) below for SQL queries.
-
-## Confirm Results
+## Verify Results
 
 Connect to the database:
 ```bash
 docker compose exec postgres psql -U postgres -d airflow
 ```
+Or connect via DBeaver with host `localhost`, port `5432`, database `airflow`, user/password `postgres`.
 
 ```sql
 -- ── 1. Row counts ────────────────────────────────────────────────────────────
