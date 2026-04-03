@@ -37,11 +37,14 @@ def insert_quarantine(df, conn):
     """Upsert quarantine records so re-runs update rather than duplicate."""
     if df.empty:
         return
-    values = list(df[["trade_id", "raw_data", "reason"]].itertuples(index=False, name=None))
+    cols = ["trade_id", "trade_time", "client_id", "instrument_id",
+            "side", "quantity", "price", "fees", "status", "reason"]
+    values = [tuple(row) for row in df[cols].itertuples(index=False, name=None)]
+    update_cols = [c for c in cols if c != "trade_id"]
+    set_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)
     sql = (
-        "INSERT INTO quarantine_trades (trade_id, raw_data, reason) VALUES %s "
-        "ON CONFLICT (trade_id) DO UPDATE SET "
-        "raw_data = EXCLUDED.raw_data, reason = EXCLUDED.reason, quarantined_at = NOW()"
+        f"INSERT INTO quarantine_trades ({', '.join(cols)}) VALUES %s "
+        f"ON CONFLICT (trade_id) DO UPDATE SET {set_clause}, quarantined_at = NOW()"
     )
     with conn.cursor() as cur:
         execute_values(cur, sql, values)

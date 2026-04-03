@@ -97,11 +97,9 @@ def transform_trades(df, clients_df, instruments_df):
     clean_df = df[df["_reason"] == ""].drop(columns=["_reason"]).reset_index(drop=True)
 
     dirty_df = df[df["_reason"] != ""].copy()
-    raw_records = dirty_df.drop(columns=["_reason"]).astype(str).to_dict(orient="records")
-    quarantine_df = pd.DataFrame({
-        "trade_id": dirty_df["trade_id"].values,
-        "raw_data": [str(r) for r in raw_records],
-        "reason":   dirty_df["_reason"].values,
-    })
+    quarantine_df = dirty_df[[
+        "trade_id", "trade_time", "client_id", "instrument_id",
+        "side", "quantity", "price", "fees", "status", "_reason",
+    ]].rename(columns={"_reason": "reason"}).astype(str).reset_index(drop=True)
 
     return clean_df, quarantine_df

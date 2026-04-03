@@ -36,7 +36,14 @@ CREATE TABLE IF NOT EXISTS brokerage.trades (
 -- trade_id is the PK so re-runs update rather than duplicate.
 CREATE TABLE IF NOT EXISTS brokerage.quarantine_trades (
     trade_id       VARCHAR(10)  PRIMARY KEY,
-    raw_data       TEXT         NOT NULL,
+    trade_time     TEXT,
+    client_id      TEXT,
+    instrument_id  TEXT,
+    side           TEXT,
+    quantity       TEXT,
+    price          TEXT,
+    fees           TEXT,
+    status         TEXT,
     reason         TEXT         NOT NULL,
     quarantined_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
