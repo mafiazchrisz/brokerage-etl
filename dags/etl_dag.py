@@ -11,41 +11,41 @@ from load import run_load
 from storage import ensure_bucket, upload_df, download_df
 
 
-def task_extract(**_):
+def task_extract(ds, **_):
     ensure_bucket()
     clients = read_clients()
     instruments = read_instruments()
     trades = read_trades()
-    upload_df(clients,      "raw/clients.csv")
-    upload_df(instruments,  "raw/instruments.csv")
-    upload_df(trades,       "raw/trades.csv")
-    print(f"Extracted: {len(clients)} clients, {len(instruments)} instruments, {len(trades)} trades")
+    upload_df(clients,      f"raw/{ds}/clients.csv")
+    upload_df(instruments,  f"raw/{ds}/instruments.csv")
+    upload_df(trades,       f"raw/{ds}/trades.csv")
+    print(f"[{ds}] Extracted: {len(clients)} clients, {len(instruments)} instruments, {len(trades)} trades")
 
 
-def task_transform(**_):
-    clients_raw     = download_df("raw/clients.csv")
-    instruments_raw = download_df("raw/instruments.csv")
-    trades_raw      = download_df("raw/trades.csv")
+def task_transform(ds, **_):
+    clients_raw     = download_df(f"raw/{ds}/clients.csv")
+    instruments_raw = download_df(f"raw/{ds}/instruments.csv")
+    trades_raw      = download_df(f"raw/{ds}/trades.csv")
 
     clients     = transform_clients(clients_raw)
     instruments = transform_instruments(instruments_raw)
     trades, quarantine = transform_trades(trades_raw, clients, instruments)
 
-    upload_df(clients,     "processed/clients.csv")
-    upload_df(instruments, "processed/instruments.csv")
-    upload_df(trades,      "processed/trades.csv")
-    upload_df(quarantine,  "processed/quarantine.csv")
+    upload_df(clients,     f"processed/{ds}/clients.csv")
+    upload_df(instruments, f"processed/{ds}/instruments.csv")
+    upload_df(trades,      f"processed/{ds}/trades.csv")
+    upload_df(quarantine,  f"processed/{ds}/quarantine.csv")
     print(
-        f"Transformed: {len(clients)} clients, {len(instruments)} instruments, "
+        f"[{ds}] Transformed: {len(clients)} clients, {len(instruments)} instruments, "
         f"{len(trades)} clean trades, {len(quarantine)} quarantined"
     )
 
 
-def task_load(**_):
-    clients     = download_df("processed/clients.csv")
-    instruments = download_df("processed/instruments.csv")
-    trades      = download_df("processed/trades.csv")
-    quarantine  = download_df("processed/quarantine.csv")
+def task_load(ds, **_):
+    clients     = download_df(f"processed/{ds}/clients.csv")
+    instruments = download_df(f"processed/{ds}/instruments.csv")
+    trades      = download_df(f"processed/{ds}/trades.csv")
+    quarantine  = download_df(f"processed/{ds}/quarantine.csv")
     run_load(clients, instruments, trades, quarantine)
 
 
