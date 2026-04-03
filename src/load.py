@@ -38,7 +38,7 @@ def insert_quarantine(df, conn):
     if df.empty:
         return
     cols = ["trade_id", "trade_time", "client_id", "instrument_id",
-            "side", "quantity", "price", "fees", "status", "reason"]
+            "side", "quantity", "price", "fees", "reason"]
     values = [tuple(row) for row in df[cols].itertuples(index=False, name=None)]
     update_cols = [c for c in cols if c != "trade_id"]
     set_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)

@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS brokerage.quarantine_trades (
     quantity       TEXT,
     price          TEXT,
     fees           TEXT,
-    status         TEXT,
     reason         TEXT         NOT NULL,
     quarantined_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
