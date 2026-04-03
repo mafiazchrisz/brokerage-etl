@@ -89,6 +89,7 @@ Re-running the DAG produces the same result (idempotent — all loads use `ON CO
 | Late updates (T0034) | Duplicate `trade_id` with different `trade_time` → keep the record with the latest timestamp. |
 | `null fees → 0` | Cancelled trades commonly carry no fee; treating null as 0 is safer than rejecting the trade. |
 | No FK constraints in DB | FK validation is done in Python transform; avoids insert-order issues between tables. |
+| KYC gate on trades | Only clients with `kyc_status = APPROVED` **and** a known `country` may have trades loaded. PENDING/REJECTED or missing country → quarantine. Country is required for sanctions screening (AML/OFAC). |
 
 ## Data Quality Rules
 
@@ -98,3 +99,5 @@ Trades are quarantined (not silently dropped) when:
 - `price` ≤ 0 or missing
 - `client_id` not found in the clients reference table
 - `instrument_id` not found in the instruments reference table
+- `kyc_status` is not `APPROVED` (PENDING and REJECTED clients cannot trade)
+- `kyc_status` is `APPROVED` but `country` is missing (KYC data incomplete — country is required for sanctions screening)
