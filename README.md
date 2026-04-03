@@ -28,9 +28,8 @@ Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 
 ## Prerequisites
 
-- [Docker Desktop]
-- [Git]
-- [DBeaver] *(optional — for browsing PostgreSQL via GUI)*
+- Docker Desktop
+- DBeaver *(optional — for browsing PostgreSQL via GUI)*
 
 ## Setup
 
@@ -57,14 +56,6 @@ First boot takes ~60–90 seconds. Check that all containers are healthy:
 docker compose ps
 ```
 
-All services should show `healthy` or `running`:
-```
-NAME        STATUS
-postgres    healthy
-minio       healthy
-airflow     running
-```
-
 You can also follow the Airflow startup log until it prints `Airflow is ready`:
 ```bash
 docker compose logs -f airflow
@@ -74,9 +65,9 @@ docker compose logs -f airflow
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Airflow UI | http://localhost:8080 | `admin / admin` |
+| Airflow UI | http://localhost:8080 | user: `admin` / password: `admin` |
 | MinIO Console | http://localhost:9001 | `minioadmin / minioadmin` |
-| PostgreSQL | `localhost:5432` | user: `postgres`, password: `postgres`, db: `airflow` |
+| PostgreSQL | `localhost:5432` | user: `postgres` / password: `postgres` / db: `airflow` |
 
 ### Step 5 — Enable and trigger the DAG
 
