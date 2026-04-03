@@ -1,6 +1,6 @@
 # Brokerage ETL Pipeline
 
-Daily ETL pipeline that ingests brokerage CSV data, cleans it, and loads it into PostgreSQL.
+Brokerage ETL pipeline for ingests brokerage CSV data, transform, and loads into PostgreSQL.
 
 ## Architecture
 
