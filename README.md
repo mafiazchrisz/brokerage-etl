@@ -16,9 +16,21 @@ data/input/*.csv
 
 Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 
+## Tech Stack
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Orchestration | Apache Airflow (standalone) | 2.9.2 |
+| Object Storage | MinIO (S3-compatible) | latest |
+| Database | PostgreSQL | 15 |
+| Language | Python | 3.11 |
+| Data processing | pandas | 2.2.2 |
+
 ## Prerequisites
 
 - [Docker Desktop]
+- [Git]
+- [DBeaver] *(optional — for browsing PostgreSQL via GUI)*
 
 ## Setup
 
