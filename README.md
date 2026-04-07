@@ -177,7 +177,7 @@ Re-running the DAG produces the same result (idempotent — all loads use `ON CO
 - **Quarantine table** — Invalid rows are stored with a reason instead of being silently dropped, supporting auditability and investigation.
 
 **KYC**
-- **KYC gate on trades** — Only clients with `kyc_status = APPROVED` **and** a non-null `country` may have trades loaded. `country` is required for sanctions screening (AML/OFAC). PENDING, REJECTED, or missing country → quarantine.
+- **KYC gate on trades** — Only clients with `kyc_status = APPROVED` **and** a non-null `country` may have trades loaded. PENDING, REJECTED, or missing country → quarantine.
 
 ## Data Quality Rules
 
