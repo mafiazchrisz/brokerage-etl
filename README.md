@@ -4,7 +4,7 @@ Brokerage ETL pipeline for ingests brokerage CSV data, transform, and loads into
 
 ## Architecture
 
-![Architecture Diagram](assets/diagram.png)
+![Architecture Diagram](architecture.png)
 
 Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 
