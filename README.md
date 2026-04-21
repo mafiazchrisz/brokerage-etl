@@ -4,15 +4,7 @@ Brokerage ETL pipeline for ingests brokerage CSV data, transform, and loads into
 
 ## Architecture
 
-```
-data/input/*.csv
-      │
-  [extract]   → upload raw files  → MinIO: brokerage/raw/
-      │
-  [transform] → download raw/     → MinIO: brokerage/processed/
-      │
-  [load]      → download processed/ → upsert into PostgreSQL (brokerage schema)
-```
+![Architecture Diagram](assets/diagram.png)
 
 Orchestrated by Apache Airflow (scheduled `@daily`, retriable on failure).
 
